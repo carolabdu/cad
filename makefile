@@ -29,6 +29,62 @@ clean:
 	rm -f odd_even_serial odd_even_openmp odd_even_mpi *.o
 
 test: all
+	./odd_even_serial 1000
+	./odd_even_openmp 1000 1 static
+	./odd_even_openmp 1000 2 static
+	./odd_even_openmp 1000 2 dynamic
+	./odd_even_openmp 1000 2 guided
+	./odd_even_openmp 1000 4 static
+	./odd_even_openmp 1000 4 dynamic
+	./odd_even_openmp 1000 4 guided
+	./odd_even_openmp 1000 8 static
+	./odd_even_openmp 1000 8 dynamic
+	./odd_even_openmp 1000 8 guided
+	mpirun -np 1 ./odd_even_mpi 1000
+	mpirun -np 2 ./odd_even_mpi 1000
+	mpirun -np 4 ./odd_even_mpi 1000
+	./odd_even_serial 5000
+	./odd_even_openmp 5000 1 static
+	./odd_even_openmp 5000 2 static
+	./odd_even_openmp 5000 2 dynamic
+	./odd_even_openmp 5000 2 guided
+	./odd_even_openmp 5000 4 static
+	./odd_even_openmp 5000 4 dynamic
+	./odd_even_openmp 5000 4 guided
+	./odd_even_openmp 5000 8 static
+	./odd_even_openmp 5000 8 dynamic
+	./odd_even_openmp 5000 8 guided
+	mpirun -np 1 ./odd_even_mpi 5000
+	mpirun -np 2 ./odd_even_mpi 5000
+	mpirun -np 4 ./odd_even_mpi 5000
+	./odd_even_serial 10000
+	./odd_even_openmp 10000 1 static
+	./odd_even_openmp 10000 2 static
+	./odd_even_openmp 10000 2 dynamic
+	./odd_even_openmp 10000 2 guided
+	./odd_even_openmp 10000 4 static
+	./odd_even_openmp 10000 4 dynamic
+	./odd_even_openmp 10000 4 guided
+	./odd_even_openmp 10000 8 static
+	./odd_even_openmp 10000 8 dynamic
+	./odd_even_openmp 10000 8 guided
+	mpirun -np 1 ./odd_even_mpi 10000
+	mpirun -np 2 ./odd_even_mpi 10000
+	mpirun -np 4 ./odd_even_mpi 10000
+	./odd_even_serial 50000
+	./odd_even_openmp 50000 1 static
+	./odd_even_openmp 50000 2 static
+	./odd_even_openmp 50000 2 dynamic
+	./odd_even_openmp 50000 2 guided
+	./odd_even_openmp 50000 4 static
+	./odd_even_openmp 50000 4 dynamic
+	./odd_even_openmp 50000 4 guided
+	./odd_even_openmp 50000 8 static
+	./odd_even_openmp 50000 8 dynamic
+	./odd_even_openmp 50000 8 guided
+	mpirun -np 1 ./odd_even_mpi 50000
+	mpirun -np 2 ./odd_even_mpi 50000
+	mpirun -np 4 ./odd_even_mpi 50000
 	./odd_even_serial 100000
 	./odd_even_openmp 100000 1 static
 	./odd_even_openmp 100000 2 static
