@@ -1,166 +1,130 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>  // Para strcmp
 #include <time.h>
-#include <omp.h> // Necessário para OpenMP
+#include <omp.h>
 
-// Função para trocar dois elementos
-void swap(int *a, int *b) {
-    int temp = *a;
-    *a = *b;
-    *b = temp;
+// Troca dois valores inteiros
+void swap_values(int *first_val_ptr, int *second_val_ptr) {
+    int holding_value = *first_val_ptr;
+    *first_val_ptr = *second_val_ptr;
+    *second_val_ptr = holding_value;
 }
 
-// Implementação do Odd-Even Transposition Sort com OpenMP
-// `schedule_policy`: 0 = static, 1 = dynamic, 2 = guided
-void odd_even_sort_openmp(int arr[], int n, int num_threads, int schedule_policy) {
-    int phase, i;
+// Exibe até 20 elementos do array
+void display_array_segment(int target_array[], int array_length, FILE *output_stream) {
+    int display_limit = (array_length > 20) ? 20 : array_length;
+    for (int i = 0; i < display_limit; ++i) {
+        fprintf(output_stream, "%d ", target_array[i]);
+    }
+    if (array_length > 20) {
+        fprintf(output_stream, "... (exibindo apenas os 20 primeiros elementos)\n");
+    } else {
+        fprintf(output_stream, "\n");
+    }
+}
 
-    // Define o número de threads para o bloco paralelo externo
+// Preenche array com inteiros aleatórios
+void fill_with_random_numbers(int dest_array[], int total_items, int max_possible_value) {
+    srand(time(NULL));
+    for (int i = 0; i < total_items; ++i) {
+        dest_array[i] = rand() % max_possible_value;
+    }
+}
+
+// Verifica se array está ordenado
+int check_if_sorted(int data_array_ptr[], int array_count) {
+    for (int idx_check = 0; idx_check < array_count - 1; ++idx_check) {
+        if (data_array_ptr[idx_check] > data_array_ptr[idx_check + 1]) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+void parallel_odd_even_sort(int array[], int n, int num_threads, const char *policy) {
     omp_set_num_threads(num_threads);
 
-    #pragma omp parallel // Cada thread entra neste bloco
+    #pragma omp parallel
     {
-        for (phase = 0; phase < n; phase++) {
-            if (phase % 2 == 0) { // Fase par
-                // Paraleliza o loop de comparação para elementos pares
-                // A barreira implícita no final do #pragma omp for garante a sincronização entre as fases
-                if (schedule_policy == 0) {
-                    #pragma omp for schedule(static)
-                    for (i = 1; i < n; i += 2) {
-                        if (arr[i - 1] > arr[i]) {
-                            swap(&arr[i - 1], &arr[i]);
-                        }
-                    }
-                } else if (schedule_policy == 1) {
-                    #pragma omp for schedule(dynamic)
-                    for (i = 1; i < n; i += 2) {
-                        if (arr[i - 1] > arr[i]) {
-                            swap(&arr[i - 1], &arr[i]);
-                        }
-                    }
-                } else { // guided
-                    #pragma omp for schedule(guided)
-                    for (i = 1; i < n; i += 2) {
-                        if (arr[i - 1] > arr[i]) {
-                            swap(&arr[i - 1], &arr[i]);
-                        }
+        for (int phase = 0; phase < n; ++phase) {
+            if (strcmp(policy, "static") == 0) {
+                #pragma omp for schedule(static)
+                for (int i = (phase % 2); i < n - 1; i += 2) {
+                    if (array[i] > array[i + 1]) {
+                        swap_values(&array[i], &array[i + 1]);
                     }
                 }
-            } else { // Fase ímpar
-                // Paraleliza o loop de comparação para elementos ímpares
-                if (schedule_policy == 0) {
-                    #pragma omp for schedule(static)
-                    for (i = 1; i < n - 1; i += 2) {
-                        if (arr[i] > arr[i + 1]) {
-                            swap(&arr[i], &arr[i + 1]);
-                        }
+            } else if (strcmp(policy, "dynamic") == 0) {
+                #pragma omp for schedule(dynamic)
+                for (int i = (phase % 2); i < n - 1; i += 2) {
+                    if (array[i] > array[i + 1]) {
+                        swap_values(&array[i], &array[i + 1]);
                     }
-                } else if (schedule_policy == 1) {
-                    #pragma omp for schedule(dynamic)
-                    for (i = 1; i < n - 1; i += 2) {
-                        if (arr[i] > arr[i + 1]) {
-                            swap(&arr[i], &arr[i + 1]);
-                        }
-                    }
-                } else { // guided
-                    #pragma omp for schedule(guided)
-                    for (i = 1; i < n - 1; i += 2) {
-                        if (arr[i] > arr[i + 1]) {
-                            swap(&arr[i], &arr[i + 1]);
-                        }
+                }
+            } else if (strcmp(policy, "guided") == 0) {
+                #pragma omp for schedule(guided)
+                for (int i = (phase % 2); i < n - 1; i += 2) {
+                    if (array[i] > array[i + 1]) {
+                        swap_values(&array[i], &array[i + 1]);
                     }
                 }
             }
+
+            // Garante que todas as comparações da fase foram feitas
+            #pragma omp barrier
+            #pragma omp flush(array)
         }
     }
 }
 
-// Função para imprimir o array (parcialmente se for grande)
-void print_array(int arr[], int n) {
-    for (int i = 0; i < n; i++) {
-        printf("%d ", arr[i]);
-    }
-    printf("\n");
-}
 
-// Função para gerar um array com números aleatórios
-void generate_random_array(int arr[], int n, int max_val) {
-    srand(time(NULL)); // Inicializa o gerador de números aleatórios
-    for (int i = 0; i < n; i++) {
-        arr[i] = rand() % max_val;
-    }
-}
-
-// Função para verificar se o array está ordenado
-int is_sorted(int arr[], int n) {
-    for (int i = 0; i < n - 1; i++) {
-        if (arr[i] > arr[i + 1]) {
-            return 0; // Não está ordenado
-        }
-    }
-    return 1; // Está ordenado
-}
 
 int main(int argc, char *argv[]) {
-    // Verifica se o número correto de argumentos foi fornecido
-    if (argc < 3 || argc > 4) {
-        printf("Uso: %s <tamanho_array> <num_threads> [politica_scheduling]\n", argv[0]);
-        printf("  politica_scheduling: 0 (static), 1 (dynamic), 2 (guided) - Padrão: 0 (static)\n");
-        return 1;
+    if (argc != 4) {
+        fprintf(stderr, "Uso correto: %s <tamanho_do_array> <numero_de_threads> <politica: static|dynamic|guided>\n", argv[0]);
+        return EXIT_FAILURE;
     }
 
-    int n = atoi(argv[1]); // Tamanho do array
-    int num_threads = atoi(argv[2]); // Número de threads
-    int schedule_policy = 0; // Padrão: static
-    if (argc == 4) {
-        schedule_policy = atoi(argv[3]);
-        if (schedule_policy < 0 || schedule_policy > 2) {
-            printf("Política de scheduling inválida. Usando static (0).\n");
-            schedule_policy = 0;
-        }
+    int array_size = atoi(argv[1]);
+    int thread_count = atoi(argv[2]);
+    const char *schedule_policy = argv[3];
+
+    if (array_size <= 0 || thread_count <= 0) {
+        fprintf(stderr, "Erro: tamanho do array e número de threads devem ser positivos.\n");
+        return EXIT_FAILURE;
     }
 
-    int *arr = (int *)malloc(n * sizeof(int)); // Aloca memória para o array
-
-    // Verifica se a alocação de memória foi bem-sucedida
-    if (arr == NULL) {
-        printf("Erro ao alocar memória.\n");
-        return 1;
+    if (!(strcmp(schedule_policy, "static") == 0 || strcmp(schedule_policy, "dynamic") == 0 || strcmp(schedule_policy, "guided") == 0)) {
+        fprintf(stderr, "Erro: política de escalonamento deve ser 'static', 'dynamic' ou 'guided'.\n");
+        return EXIT_FAILURE;
     }
 
-    // Gerar array aleatório
-    generate_random_array(arr, n, 1000);
-
-    printf("Array original (primeiros 20): ");
-    if (n <= 20) {
-        print_array(arr, n);
-    } else {
-        print_array(arr, 20);
-        printf("...\n");
+    int *main_array = (int *)malloc(array_size * sizeof(int));
+    if (main_array == NULL) {
+        fprintf(stderr, "Erro ao alocar memória.\n");
+        return EXIT_FAILURE;
     }
 
-    // Medição de tempo para a ordenação com OpenMP
-    double start_time = omp_get_wtime(); // Inicia a contagem do tempo
-    odd_even_sort_openmp(arr, n, num_threads, schedule_policy); // Chama a função de ordenação OpenMP
-    double end_time = omp_get_wtime();   // Finaliza a contagem do tempo
+    fill_with_random_numbers(main_array, array_size, 1000);
 
-    double elapsed_time = end_time - start_time; // Calcula o tempo decorrido em segundos
+    fprintf(stderr, "Array original (segmento): ");
+    display_array_segment(main_array, array_size, stderr);
 
-    printf("Array ordenado (primeiros 20): ");
-    if (n <= 20) {
-        print_array(arr, n);
-    } else {
-        print_array(arr, 20);
-        printf("...\n");
-    }
+    double start_time_stamp = omp_get_wtime();
 
-    // Verifica se o array está ordenado e imprime o resultado
-    printf("Array está ordenado: %s\n", is_sorted(arr, n) ? "Sim" : "Não");
-    printf("Tempo de execução OpenMP (%d threads, %s): %.6f segundos\n",
-           num_threads,
-           (schedule_policy == 0) ? "static" : ( (schedule_policy == 1) ? "dynamic" : "guided" ),
-           elapsed_time);
+    parallel_odd_even_sort(main_array, array_size, thread_count, schedule_policy);
 
-    free(arr); // Libera a memória alocada
-    return 0;
+    double end_time_stamp = omp_get_wtime();
+
+    fprintf(stdout, "Tempo de execução OpenMP (%d threads, política %s): %.6f segundos\n",
+            thread_count, schedule_policy, end_time_stamp - start_time_stamp);
+
+    fprintf(stderr, "Array ordenado (segmento): ");
+    display_array_segment(main_array, array_size, stderr);
+
+    fprintf(stdout, "Status de ordenação: %s\n", check_if_sorted(main_array, array_size) ? "Ordenado" : "Não Ordenado");
+
+    free(main_array);
+    return EXIT_SUCCESS;
 }
